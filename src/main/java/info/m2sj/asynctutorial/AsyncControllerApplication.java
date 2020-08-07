@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -91,7 +92,7 @@ public class AsyncControllerApplication {
     @Service
     static class AsyncService {
         public ListenableFuture<String> getNameByListen(String name) {
-            SimpleAsyncTaskExecutor t = new SimpleAsyncTaskExecutor();
+            AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
                 SECONDS.sleep(10);
                 return "[" + name + "]";
@@ -104,7 +105,6 @@ public class AsyncControllerApplication {
 //                SECONDS.sleep(10);
 //                return "[" + name + "]";
 //            });
-
             FutureTask<String> future = new FutureTask<>(() -> {
                 SECONDS.sleep(10);
                 return "[" + name + "]";
