@@ -7,7 +7,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -55,9 +53,9 @@ public class AsyncControllerApplication {
         }
 
         @GetMapping("callback-hell/{name}")
-        public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
-            DeferredResult<StringBuilder> rtn = new DeferredResult<>();
-            asyncService.getNameByListen1(new StringBuilder(name)).addCallback(n -> {
+        public DeferredResult<String> callbackHell(@PathVariable String name) {
+            DeferredResult<String> rtn = new DeferredResult<>();
+            asyncService.getNameByListen1(name).addCallback(n -> {
                 asyncService.getNameByListen2(n).addCallback(n2 -> {
                     asyncService.getNameByListen3(n2).addCallback(n3 -> {
                         rtn.setResult(n3);
@@ -68,6 +66,13 @@ public class AsyncControllerApplication {
             }, e -> {
             });
             return rtn;
+        }
+
+        @GetMapping("comple/{name}")
+        public CompletableFuture<String> comple(@PathVariable String name)  {
+            return asyncService.getNameByComple1(name)
+                    .thenCompose(asyncService::getNameByComple2)
+                    .thenCompose(asyncService::getNameByComple3);
         }
 
         @GetMapping("sync/{name}")
@@ -116,30 +121,61 @@ public class AsyncControllerApplication {
             });
         }
 
-        public ListenableFuture<StringBuilder> getNameByListen1(StringBuilder name) {
+        public ListenableFuture<String> getNameByListen1(String name) {
             AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
                 SECONDS.sleep(3);
-                return new StringBuilder("(" + name.toString() + ")");
+                return "(" + name + ")";
             });
         }
 
-        public ListenableFuture<StringBuilder> getNameByListen2(StringBuilder name) {
+        public ListenableFuture<String> getNameByListen2(String name) {
             AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
                 SECONDS.sleep(3);
-                return new StringBuilder("{" + name.toString() + "}");
+                return "{" + name + "}";
             });
         }
 
-        public ListenableFuture<StringBuilder> getNameByListen3(StringBuilder name) {
+        public ListenableFuture<String> getNameByListen3(String name) {
             AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
                 SECONDS.sleep(3);
-                return new StringBuilder("[" + name.toString() + "]");
+                return "[" + name + "]";
             });
         }
 
+        public CompletableFuture<String> getNameByComple1(String name) {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    SECONDS.sleep(3);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "(" + name + ")";
+            });
+        }
+
+        public CompletableFuture<String> getNameByComple2(String name) {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    SECONDS.sleep(3);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "{" + name + "}";
+            });
+        }
+        public CompletableFuture<String> getNameByComple3(String name) {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    SECONDS.sleep(3);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "[" + name + "]";
+            });
+        }
         public Future<String> getName(String name) {
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
 //            return executorService.submit(() -> {
