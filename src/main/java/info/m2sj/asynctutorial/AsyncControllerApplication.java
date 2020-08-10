@@ -7,6 +7,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,6 +54,22 @@ public class AsyncControllerApplication {
             return nameByListen;
         }
 
+        @GetMapping("callback-hell/{name}")
+        public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
+            DeferredResult<StringBuilder> rtn = new DeferredResult<>();
+            asyncService.getNameByListen1(new StringBuilder(name)).addCallback(n -> {
+                asyncService.getNameByListen2(n).addCallback(n2 -> {
+                    asyncService.getNameByListen3(n2).addCallback(n3 -> {
+                        rtn.setResult(n3);
+                    }, e -> {
+                    });
+                }, e -> {
+                });
+            }, e -> {
+            });
+            return rtn;
+        }
+
         @GetMapping("sync/{name}")
         public String sync(@PathVariable String name) throws InterruptedException {
             log.info(" ---> in sync");
@@ -95,7 +112,31 @@ public class AsyncControllerApplication {
             AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
                 SECONDS.sleep(10);
-                return "[" + name + "]";
+                return "(" + name + ")";
+            });
+        }
+
+        public ListenableFuture<StringBuilder> getNameByListen1(StringBuilder name) {
+            AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
+            return t.submitListenable(() -> {
+                SECONDS.sleep(3);
+                return new StringBuilder("(" + name.toString() + ")");
+            });
+        }
+
+        public ListenableFuture<StringBuilder> getNameByListen2(StringBuilder name) {
+            AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
+            return t.submitListenable(() -> {
+                SECONDS.sleep(3);
+                return new StringBuilder("{" + name.toString() + "}");
+            });
+        }
+
+        public ListenableFuture<StringBuilder> getNameByListen3(StringBuilder name) {
+            AsyncListenableTaskExecutor t = new SimpleAsyncTaskExecutor();
+            return t.submitListenable(() -> {
+                SECONDS.sleep(3);
+                return new StringBuilder("[" + name.toString() + "]");
             });
         }
 
