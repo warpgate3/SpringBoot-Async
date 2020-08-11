@@ -1,5 +1,111 @@
 ## 1\. Overview
 
+Blocking/Non Blocking 의미는 차치하고 결국 이런 단어를 언급해 설명하고자 하는 건 요청이 있고 해당 요청에 대한 처리 작업 시간이 길더라도 wait 하지 않고 얼마나 자원을 효율적으로 사용할 수 있는가에 초점이 있다. 오늘은 Spring Boot로  동작 가능한 프로그램을 작성해 실제로 어떻게 동작하는지 확인해보겠다.
+
+## 2\. Servlet Thread  (Blocking)
+
+tomcat은 default 로 200개의 써블릿 쓰레드를 설정해서 요청을 처리한다. 만약에 200개의 쓰레드가 모두 사용 중이라면 이후 요청은 서블릿 쓰레드가 확보 될 때까지 대기를 해야된다. 테스트를 쉽게 하기 위해서 톰캣의 스레드 갯수를 1개로 변경하고 테스트를 하겠다.
+
+### 2.1 application.yml
+
+spring boot 에서는 application.yml 파일에 설정으로 쓰레드의 갯수를 변경할 수 있다.
+
+```
+server:
+  tomcat:
+    threads:
+      max: 1
+
+```
+
+### 2.2 Controller
+
+테스트를 위한 간단 controller 를 만들겠다. 이름을 Path Parameter 전달하면 10초후에 대괄호를 씌워 반환한다.
+
+```
+    @GetMapping("sync/{name}")
+    public String sync(@PathVariable String name) throws InterruptedException {
+    	log.info(" ---> in sync");
+    	TimeUnit.SECONDS.sleep(10);
+    	return "[" + name + "]";
+    }
+```
+
+### 2.3 테스트
+
+Spring Boot서버를 시작하고 URL을 요청해 보겠다. 최초 1회 요청 후 F5 를 눌러 재 요청하거나 브라우저 탭을 여러게 띄어서 계속적으로 요청해보겠다. 해당 메서드에서 10초를 대기하기 때문에 첫번째 요청이 끝나기까지 나머지 요청은 Pending 된다.
+
+[##_Image|kage@Vqwow/btqGfNzrgCD/VCQeeKx2gYMKBbEedDufIk/img.png|alignLeft|data-origin-width="0" data-origin-height="0" data-ke-mobilestyle="widthContent"|||_##]
+
+ 출력된 로그 문자열(\---> in sync)로 확인할 수 있듯이 브라우저에서 아무리 요청을 많이 보내도 10초에 한번씩 출력된다. tomcat 의 max threads 숫자를 높이면 해당하는 숫자만큼  동시 처리가 가능할 것이다.
+
+## 3\. Servlet Thread (Non Blocking)
+
+이제 같은 환경에서 Non Blocking 으로 요청을 처리하는 몇가지 방법을 알아보겠다. 
+
+### 3.1 Callable
+
+Callable 은 Java에서 Multi Threading 처리를 위해 Java 1.5 에서 추가된 인터페이스이다. Servlet 3.0 부터는 Servlet 에서 리턴값을 Callable 을 리턴하면 비동기 처리가 가능하다. Spring @MVC 3.2 이상에서도 해당 스펙을 지원한다. 아래 코드는 Callable 리턴하는 예제 코드이다.
+
+```
+ @GetMapping("callable/{name}")
+        public Callable<String> getName(@PathVariable String name) {
+            log.info(" ---> in callable");
+            return () -> {
+                TimeUnit.SECONDS.sleep(10);
+                return "[" + name + "]";
+            };
+        }
+```
+
+자바8 lamda를 이용해 Callable 을 구현한 익명함수를 반환했다.
+
+### 3.2 Callable 테스트 
+
+10초에 delay 타임이 있기 때문에 응답이 바로오지는 않지만 로그를 확인해 보면 요청이 올때마다 바로 메서드에 진입하는걸 확인할 수있다.  처음에 Node.js 가 세상에 나오면서 Java Servlet 에 비교해 빠른 응답과 많은 처리량을 할 수 있던 차이점이 이와 비슷한 맥락이다.
+
+[##_Image|kage@bXSjGz/btqGfOecH09/JzL8AmFRH4sSdf7QoOg0x0/img.png|alignLeft|data-origin-width="0" data-origin-height="0" data-ke-mobilestyle="widthContent"|브라우저에서 재요청 할때마다 ---&gt; in callable 메서드가 출력된다.||_##]
+
+### 3.3 DefferedResult
+
+DefferedResult 역시 Spring @MVC 3.2 이상에서 Servlet 의 비동기 처리를 위한 객체이다. Controller 에서 DefferedResult 를 생성해서 반환하고 이후에 해당 객체의 메서드로 종료 처리 또는 예외 처리가 가능하다. Callable 과 가장 큰 차이점은 비동기 처리를 위한 쓰레드 작업이 내부가 아닌 외부에서 관리 된다는 점이다. 
+
+```
+ @GetMapping("deffer/{name}")
+        public DeferredResult deferredResult(@PathVariable String name) {
+            log.info("==> in deferredResult");
+            DeferredResult<String> rtn = new DeferredResult<>();
+            Runnable anotherThread = () -> {
+                try {
+                    TimeUnit.SECONDS.sleep(10);
+                    rtn.setResult("[" + name + "]");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            };
+            
+            new Thread(anotherThread).start();
+
+            return rtn;
+        }
+```
+
+Controller 에서는 DefferedResult<String> 객체를 생성해서 반환만 해준다. 그리고 별도의 쓰레드에서 작업이 완료되면 setResult() 메서드를 호출해서 종결처리를 한다. 또는s etErrorResult() 메서드를 이용해서 에러 처리를 할 수 있다. 이 부분은 자바스크립트에서 비동기 처리를 할때 언급되는 callback 과 Promise 패턴의 차이점이기도 하다.
+
+### 3.4 DefferedResult
+
+DefferedResult 를 이용한 URI 호출 역시 Callable 과 마찬가지로 페이지 요청마다 로그가 출력되는걸 확인할 수 있다.
+
+[##_Image|kage@bLBtNg/btqGfNNdhYK/cDSAQSiHWtVXoc6TB6nkNK/img.png|alignLeft|data-origin-width="0" data-origin-height="0" data-ke-mobilestyle="widthContent"|브라우저에서 재요청 할때마다 ==&gt; in defferedResult 출력된다.||_##]
+
+## 4\. Conclusion
+
+간략한 예제를 이용해 Spring Boot에서 Cotroller의 비동기 응답처리를 하는 법을 알아봤다. 물론 세부적 자원에 대한 고려 사항이 더욱 많을 수 있겠지만 단편적인 부분만 봤을 때 많은 요청을 처리하기 위한 좋은 방법이 될 수 있을 것 같다. 예제 코드 전체는 아래 링크에 가면 확인할 수 있다.
+
+_**[github.com/warpgate3/async-springboot](https://github.com/warpgate3/async-springboot)**_
+
+## 1\. Overview
+
 지난번에 Controller 에서 비동기 처리 하는법을 알아봤다. 오늘은 Service 계층에서 비동기 처리를 위한 몇가지 방법을 간단한 예제로 알아보겠다.
 
 ## 2\. Asynchronous Service
