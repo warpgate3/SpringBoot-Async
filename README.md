@@ -242,9 +242,42 @@ public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
 
 CompletableFuture 의 thenCompose 메서드를 이용해서 각 메서드의 결과 값들을 파이프 라인 형태로 처리한 것이다. 가독성이 좋아지고 코드가 무척 간결해졌다. CompletableFuture 메서드는 그외 많은 메서드가 존재하는데 아래 링크를 참고하면 좋다.
 
-2.4 @Async  
+### 2.4 @Async
 
-꼴레리
+Spring에서는 비동기 통신을 위한 어노테이션을 지원한다. 몇가지 선언만으로 간단하게 비동기 메서드를 만들수 있다.
+
+@Async 어노테이션을 활성화를 위해서 @EnableAsync 선언을 해야한다.  
+
+```
+@SpringBootApplication
+@EnableAsync
+public class AsyncControllerApplication {
+...
+```
+
+비동기 처리를 하고 싶은 메서드에 @Async 를 선언한다. 반환값 없이 Void 로도 할 수 있지만 리턴값을 받아 이후 처리가 필요하다면 위에서 언급한 비동기 클래스를 반환하면 된다.   
+
+```
+ @GetMapping("async/{name}")
+        public CompletableFuture<String> async(@PathVariable String name)  {
+           return asyncService.getNameByAsync(name);
+        }
+
+```
+
+```
+@Async
+public CompletableFuture<String> getNameByAsync(String name) {
+	try {
+		SECONDS.sleep(3);
+	} catch (InterruptedException e) {
+		e.printStackTrace();
+	}
+	return CompletableFuture.completedFuture("[" + name + "]");
+}
+```
+
+@Async 를 사용하는데 있어서 몇가지 제약사항이 존재하는데, public 메서드만 사용가능 하고 같은 인스턴스 안의 메서드끼리 호출할때는 비동기 호출이 되지 않는다.
 
 ## 3\. Conclusion
 
@@ -262,3 +295,5 @@ Java & Spring 에서의 비동기 처리를 몇 가지 클래스를 소개했지
 [https://www.baeldung.com/java-asynchronous-programming](https://www.baeldung.com/java-asynchronous-programming)
 
 [https://www.baeldung.com/spring-async](https://www.baeldung.com/spring-async)
+
+[https://spring.io/guides/gs/async-method/](https://spring.io/guides/gs/async-method/)
