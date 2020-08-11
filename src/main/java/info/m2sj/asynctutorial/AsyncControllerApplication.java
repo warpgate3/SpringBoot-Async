@@ -7,6 +7,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,7 @@ import java.util.concurrent.*;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 @SpringBootApplication
+@EnableAsync
 public class AsyncControllerApplication {
     private final static Logger log = LoggerFactory.getLogger(AsyncControllerApplication.class);
 
@@ -34,7 +37,7 @@ public class AsyncControllerApplication {
         private AsyncService asyncService;
 
         @GetMapping("future/{name}")
-        public Future<String> future(@PathVariable String name) throws InterruptedException, ExecutionException {
+        public Future<String> future(@PathVariable String name) {
             final Future<String> futureName = asyncService.getName(name);
 //            final String resultName = futureName.get();
             log.info("expect to print this line");
@@ -70,9 +73,16 @@ public class AsyncControllerApplication {
 
         @GetMapping("comple/{name}")
         public CompletableFuture<String> comple(@PathVariable String name)  {
+            asyncService.getNameByComple1(name)
+                    .thenCombine(asyncService.getNameByComple2(name), (a, b) -> a+":::"+b);
             return asyncService.getNameByComple1(name)
                     .thenCompose(asyncService::getNameByComple2)
                     .thenCompose(asyncService::getNameByComple3);
+        }
+
+        @GetMapping("async/{name}")
+        public CompletableFuture<String> async(@PathVariable String name)  {
+           return asyncService.getNameByAsync(name);
         }
 
         @GetMapping("sync/{name}")
@@ -188,6 +198,15 @@ public class AsyncControllerApplication {
             });
             executorService.execute(future);
             return future;
+        }
+        @Async
+        public CompletableFuture<String> getNameByAsync(String name) {
+            try {
+                SECONDS.sleep(3);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return CompletableFuture.completedFuture("[" + name + "]");
         }
     }
 }
