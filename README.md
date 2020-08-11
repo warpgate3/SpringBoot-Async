@@ -1,6 +1,8 @@
-## 1\. Overview
+# 1\. Overview
 
 Blocking/Non Blocking 의미는 차치하고 결국 이런 단어를 언급해 설명하고자 하는 건 요청이 있고 해당 요청에 대한 처리 작업 시간이 길더라도 wait 하지 않고 얼마나 자원을 효율적으로 사용할 수 있는가에 초점이 있다. 오늘은 Spring Boot로  동작 가능한 프로그램을 작성해 실제로 어떻게 동작하는지 확인해보겠다.
+
+# 2. Async in Controller
 
 ## 2\. Servlet Thread  (Blocking)
 
@@ -98,15 +100,10 @@ DefferedResult 를 이용한 URI 호출 역시 Callable 과 마찬가지로 페�
 
 [##_Image|kage@bLBtNg/btqGfNNdhYK/cDSAQSiHWtVXoc6TB6nkNK/img.png|alignLeft|data-origin-width="0" data-origin-height="0" data-ke-mobilestyle="widthContent"|브라우저에서 재요청 할때마다 ==&gt; in defferedResult 출력된다.||_##]
 
-## 4\. Conclusion
 
-간략한 예제를 이용해 Spring Boot에서 Cotroller의 비동기 응답처리를 하는 법을 알아봤다. 물론 세부적 자원에 대한 고려 사항이 더욱 많을 수 있겠지만 단편적인 부분만 봤을 때 많은 요청을 처리하기 위한 좋은 방법이 될 수 있을 것 같다. 예제 코드 전체는 아래 링크에 가면 확인할 수 있다.
+# 3\. Async in Service 계층
 
-_**[github.com/warpgate3/async-springboot](https://github.com/warpgate3/async-springboot)**_
-
-## 1\. Overview
-
-지난번에 Controller 에서 비동기 처리 하는법을 알아봤다. 오늘은 Service 계층에서 비동기 처리를 위한 몇가지 방법을 간단한 예제로 알아보겠다.
+Controller 에서 비동기 처리 하는법을 알아봤다. Service 계층에서 비동기 처리를 위한 몇가지 방법을 간단한 예제로 알아보겠다.
 
 ## 2\. Asynchronous Service
 
@@ -279,7 +276,7 @@ public CompletableFuture<String> getNameByAsync(String name) {
 
 @Async 를 사용하는데 있어서 몇가지 제약사항이 존재하는데, public 메서드만 사용가능 하고 같은 인스턴스 안의 메서드끼리 호출할때는 비동기 호출이 되지 않는다.
 
-## 3\. Conclusion
+# 4\. Conclusion
 
 Java & Spring 에서의 비동기 처리를 몇 가지 클래스를 소개했지만 비동기 처리를 위한 여러가지 개념과 API 실무에서 제대로 활용하기 위해서는  많은 학습이 필요하다. 전체 코드는 아래 GITHUB 링크를 참고하면 된다.  
 [github.com/warpgate3/async-springboot.git](https://github.com/warpgate3/async-springboot.git)  
