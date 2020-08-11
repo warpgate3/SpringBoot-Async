@@ -105,8 +105,6 @@ DefferedResult 를 이용한 URI 호출 역시 Callable 과 마찬가지로 페�
 
 Controller 에서 비동기 처리 하는법을 알아봤다. Service 계층에서 비동기 처리를 위한 몇가지 방법을 간단한 예제로 알아보겠다.
 
-## 3.1\. Asynchronous Service
-
 ### 3.1.1 Future
 
 Future 는 Java 1.5 부터 java.util.concurrent 패키지에 추가된 비동기 처리를 위한 인터페이스다. Future 를 이용해서 비동기 처리를 할 수 있는 서비스를 만들어서 테스트 해보자. 10초를 대기하고 이후 입력받은 이름에 대괄호를 씌어 반환하는 메서드이다.
