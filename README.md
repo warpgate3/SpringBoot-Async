@@ -24,7 +24,7 @@ server:
 
 테스트를 위한 간단 controller 를 만들겠다. 이름을 Path Parameter 전달하면 10초후에 대괄호를 씌워 반환한다.
 
-```
+```java
     @GetMapping("sync/{name}")
     public String sync(@PathVariable String name) throws InterruptedException {
     	log.info(" ---> in sync");
@@ -49,7 +49,7 @@ Spring Boot서버를 시작하고 URL을 요청해 보겠다. 최초 1회 요청
 
 Callable 은 Java에서 Multi Threading 처리를 위해 Java 1.5 에서 추가된 인터페이스이다. Servlet 3.0 부터는 Servlet 에서 리턴값을 Callable 을 리턴하면 비동기 처리가 가능하다. Spring @MVC 3.2 이상에서도 해당 스펙을 지원한다. 아래 코드는 Callable 리턴하는 예제 코드이다.
 
-```
+```java
  @GetMapping("callable/{name}")
         public Callable<String> getName(@PathVariable String name) {
             log.info(" ---> in callable");
@@ -72,7 +72,7 @@ Callable 은 Java에서 Multi Threading 처리를 위해 Java 1.5 에서 추가�
 
 DefferedResult 역시 Spring @MVC 3.2 이상에서 Servlet 의 비동기 처리를 위한 객체이다. Controller 에서 DefferedResult 를 생성해서 반환하고 이후에 해당 객체의 메서드로 종료 처리 또는 예외 처리가 가능하다. Callable 과 가장 큰 차이점은 비동기 처리를 위한 쓰레드 작업이 내부가 아닌 외부에서 관리 된다는 점이다. 
 
-```
+```java
  @GetMapping("deffer/{name}")
         public DeferredResult deferredResult(@PathVariable String name) {
             log.info("==> in deferredResult");
@@ -109,7 +109,7 @@ Controller 에서 비동기 처리 하는법을 알아봤다. Service 계층에�
 
 Future 는 Java 1.5 부터 java.util.concurrent 패키지에 추가된 비동기 처리를 위한 인터페이스다. Future 를 이용해서 비동기 처리를 할 수 있는 서비스를 만들어서 테스트 해보자. 10초를 대기하고 이후 입력받은 이름에 대괄호를 씌어 반환하는 메서드이다.
 
-```
+```java
  public Future<String> getName(String name) {
  	final ExecutorService executorService = Executors.newSingleThreadExecutor();
  	return executorService.submit(() -> {
@@ -121,7 +121,7 @@ Future 는 Java 1.5 부터 java.util.concurrent 패키지에 추가된 비동기
 
 위와 같이 ExecutorService 의 submit 메서드에 람다식을 이용 반환값을 Future 로 지정해서  사용할 수 있지만, Future 를 구현하고 있는 FutureTask 를 직접 생성해서 사용할 수도 있다. execute() 메서드는 인자로 FutureTask를 받을수 있는건 FutureTask 가 내부적으로 Runnable 인터페이스를 구현하고 있기 때문이다.
 
-```
+```java
 public Future<String> getName(String name) {
             final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -136,7 +136,7 @@ public Future<String> getName(String name) {
 
 getName을 호출 하는 Controller 를 만들겠다.
 
-```
+```java
  @RestController
     @RequestMapping("/")
     static class AsyncController {
@@ -158,7 +158,7 @@ getName을 호출 하는 Controller 를 만들겠다.
 
 위에서 언급했듯 Future 는 응답이 끝날때까지 blocking이 된다. 그걸 보완한 Future 를 구현하는 ListenableFuture 라는 클래스를 스프링 4.0 부터 지원하기 시작했다. ListenableFuture 클래스는 Future 에 callback 메서드를 이용하는 방법이다. 즉 Future.get 을 기다려서 처리하는 게 아니라 작업이 끝날경우 처리해야 할 callback 메서드로 정의하는 것 이다. 예제를 통해 알아보겠다.
 
-```
+```java
  public ListenableFuture<String> getNameByListen(String name) {
             SimpleAsyncTaskExecutor t = new SimpleAsyncTaskExecutor();
             return t.submitListenable(() -> {
@@ -170,7 +170,7 @@ getName을 호출 하는 Controller 를 만들겠다.
 
 ListenableFuture 를 리턴하는 SimpleAsyncTaskExecutor 가 SpringBoot 2.0 부터 지원한다. 해당 Executor 를 생성해서 처리하겠다. **예제에서는 간결한 테스트를 위해 메서드안에서 직접 생성했지만 실무에서는 스프링 Bean으로 생성해서 싱글톤으로 관리해야된다. 이 내용은 위에서 언급한 Future 예제의 final ExecutorService executorService = Executors.newSingleThreadExecutor(); 이 부분도 마찬가지이다.**
 
-```
+```java
  @GetMapping("listenable/{name}")
         public ListenableFuture<String> listenable(@PathVariable String name) {
             final ListenableFuture<String> nameByListen = asyncService.getNameByListen(name);
@@ -190,7 +190,7 @@ addCallback 메서드를 이용해서 2개의 함수를 인수로 전달했다. 
 
 아마 언어에 상관없이 비동기 작업을 위해 callback 함수를 이용해본 사람은 누구나 한번쯤 듣거나 겪어 봤을 것이다. Callback 지옥을 .. 여러개의 비동기 처리를 작업할때 callback 안에서 callback 그 안에서 또 callback 을 호출해야 된다. callback 이 3개만 중첩 그 때 부터는 유지 보수나 코드 가독성이 떨어진다. ListeableFuture 는 callback 패턴을 이용하기 때문에 그러한 단점이 존재하다. 
 
-```
+```java
 @GetMapping("callback-hell/{name}")
 public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
 	DeferredResult<StringBuilder> rtn = new DeferredResult<>();
@@ -206,7 +206,7 @@ public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
         });
 	return rtn;
 }
-```
+```java
 
 위 코드와 같은 헬을 해결할 수 있는 클래스가 자바 1.8부터 지원하는 CompletableFuture 이다.   
 우선 CompletableFuture 로 변경한 코드를 먼저 살펴보자  
@@ -218,11 +218,11 @@ public DeferredResult<StringBuilder> callbackHell(@PathVariable String name) {
                     .thenCompose(asyncService::getNameByComple2)
                     .thenCompose(asyncService::getNameByComple3);
         }
-```
+```java
 
 비교도 안될만큼 간결하다. 각각의 getNameByComple 메서드들은 모두 CompletableFuture<String> 을 반환하는 메서드이다.  
 
-```
+```java
  public CompletableFuture<String> getNameByComple1(String name) {
             return CompletableFuture.supplyAsync(() -> {
                 try {
@@ -243,7 +243,7 @@ Spring에서는 비동기 통신을 위한 어노테이션을 지원한다. 몇�
 
 @Async 어노테이션을 활성화를 위해서 @EnableAsync 선언을 해야한다.  
 
-```
+```java
 @SpringBootApplication
 @EnableAsync
 public class AsyncControllerApplication {
@@ -252,7 +252,7 @@ public class AsyncControllerApplication {
 
 비동기 처리를 하고 싶은 메서드에 @Async 를 선언한다. 반환값 없이 Void 로도 할 수 있지만 리턴값을 받아 이후 처리가 필요하다면 위에서 언급한 비동기 클래스를 반환하면 된다.   
 
-```
+```java
  @GetMapping("async/{name}")
         public CompletableFuture<String> async(@PathVariable String name)  {
            return asyncService.getNameByAsync(name);
@@ -260,7 +260,7 @@ public class AsyncControllerApplication {
 
 ```
 
-```
+```java
 @Async
 public CompletableFuture<String> getNameByAsync(String name) {
 	try {
